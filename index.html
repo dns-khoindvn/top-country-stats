@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Top 10 Visitor Countries</title>
+<style>
+body{font-family:Arial;background:#eaf3ff;display:flex;justify-content:center;padding:40px}
+.card{background:#f4f8ff;width:380px;border-radius:16px;padding:18px;box-shadow:0 6px 15px rgba(0,0,0,.1)}
+h2{text-align:center;margin:8px 0 12px}
+.meta{font-size:12px;opacity:.7;text-align:center;margin-bottom:12px}
+table{width:100%;border-collapse:collapse}
+th{background:linear-gradient(90deg,#29c7ff,#37e3ff);color:#fff;padding:10px}
+td{padding:10px;text-align:center}
+tr:nth-child(even){background:#e9f1ff}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h2>🌍 TOP 10 Visitor Countries</h2>
+<div class="meta" id="meta">Loading...</div>
+
+<table>
+<thead>
+<tr><th>#</th><th>Country</th><th>Visits</th></tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+
+<script>
+async function load(){
+  const res = await fetch("./public/data/top-countries.json",{cache:"no-store"});
+  const data = await res.json();
+
+  document.getElementById("meta").textContent =
+    `Last ${data.days} days • ${data.metric} • ${new Date(data.generatedAt).toLocaleString()}`;
+
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+
+  for(const r of data.rows){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.rank}</td><td>${r.country}</td><td>${Number(r.visits).toLocaleString()}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+load();
+</script>
+
+</body>
+</html>
