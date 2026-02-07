@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-02-07T21:18:34.887Z",
+  "generatedAt": "2026-02-07T22:17:55.276Z",
   "days": 28,
   "metric": "sessions",
   "rows": [
     {
       "rank": 1,
       "country": "United States",
-      "visits": 836
+      "visits": 838
     },
     {
       "rank": 2,
       "country": "Iraq",
-      "visits": 213
+      "visits": 214
     },
     {
       "rank": 3,
