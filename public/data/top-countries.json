@@ -1,27 +1,27 @@
 {
-  "generatedAt": "2026-02-07T14:19:24.056Z",
+  "generatedAt": "2026-02-07T15:18:01.817Z",
   "days": 28,
   "metric": "sessions",
   "rows": [
     {
       "rank": 1,
       "country": "United States",
-      "visits": 822
+      "visits": 823
     },
     {
       "rank": 2,
       "country": "Iraq",
-      "visits": 205
+      "visits": 206
     },
     {
       "rank": 3,
       "country": "Brazil",
-      "visits": 179
+      "visits": 181
     },
     {
       "rank": 4,
       "country": "Vietnam",
-      "visits": 118
+      "visits": 119
     },
     {
       "rank": 5,
@@ -36,7 +36,7 @@
     {
       "rank": 7,
       "country": "Saudi Arabia",
-      "visits": 85
+      "visits": 86
     },
     {
       "rank": 8,
@@ -51,7 +51,7 @@
     {
       "rank": 10,
       "country": "Morocco",
-      "visits": 73
+      "visits": 74
     }
   ]
 }
