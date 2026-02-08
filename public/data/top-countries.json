@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-08T14:21:20.451Z",
+  "generatedAt": "2026-02-08T15:19:26.540Z",
   "days": 28,
   "metric": "sessions",
   "rows": [
@@ -11,7 +11,7 @@
     {
       "rank": 2,
       "country": "Iraq",
-      "visits": 215
+      "visits": 216
     },
     {
       "rank": 3,
