@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-02-08T04:28:38.036Z",
+  "generatedAt": "2026-02-08T05:56:44.356Z",
   "days": 28,
   "metric": "sessions",
   "rows": [
     {
       "rank": 1,
       "country": "United States",
-      "visits": 848
+      "visits": 849
     },
     {
       "rank": 2,
