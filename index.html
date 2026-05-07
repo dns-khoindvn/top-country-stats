@@ -3,62 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPA Auto Installer</title>
+    <title>IPA Manager Pro</title>
     <script src="https://unpkg.com/app-info-parser@1.1.4/dist/app-info-parser.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; text-align: center; padding: 20px; background: #f0f2f5; }
-        .container { background: white; max-width: 400px; margin: 50px auto; padding: 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        #drop-zone { border: 2px dashed #007aff; padding: 40px; border-radius: 15px; cursor: pointer; color: #007aff; margin: 20px 0; transition: 0.3s; }
-        #drop-zone:hover { background: #eef6ff; }
-        .btn { background: #007aff; color: white; padding: 15px 30px; border-radius: 10px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 20px; }
-        #status { font-size: 14px; color: #666; margin-top: 15px; }
+        :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
+        body { font-family: -apple-system, sans-serif; background: var(--ios-bg); display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        #drop-zone { border: 2px dashed var(--ios-blue); padding: 30px; border-radius: 15px; cursor: pointer; color: var(--ios-blue); background: #f0f7ff; margin: 20px 0; transition: 0.3s; }
+        #drop-zone:hover { background: #e1efff; }
+        .progress-box { display: none; height: 8px; background: #eee; border-radius: 4px; margin: 20px 0; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background: var(--ios-blue); transition: 0.1s; }
+        .btn { background: var(--ios-blue); color: white; padding: 15px 25px; border-radius: 12px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 15px; cursor: pointer; border: none; width: 100%; }
+        #qrcode { margin-top: 20px; display: flex; justify-content: center; }
+        .app-info { background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 12px; text-align: left; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Cài đặt IPA trực tiếp</h2>
-        <div id="drop-zone">Kéo thả file .ipa vào đây hoặc nhấn để chọn</div>
-        <input type="file" id="file-input" style="display:none" accept=".ipa">
-        <div id="status">Sẵn sàng</div>
-        <div id="result"></div>
+
+<div class="card">
+    <h2 style="margin-top:0">IPA Manager</h2>
+    
+    <input type="password" id="password-input" placeholder="Mật khẩu quản lý">
+    <input type="text" id="custom-name" placeholder="Tên file khi lưu (tùy chọn)">
+
+    <div id="drop-zone">Kéo thả hoặc nhấn để chọn file .ipa</div>
+    <input type="file" id="file-input" style="display:none" accept=".ipa">
+
+    <div class="app-info" id="app-info"></div>
+
+    <div class="progress-box" id="progress-box">
+        <div class="progress-bar" id="progress-bar"></div>
     </div>
 
-    <script>
-        // THAY LINK NÀY BẰNG LINK WORKER CỦA BẠN (Cái link .workers.dev ấy)
-        const WORKER_URL = "https://ipa-manager.ios-khoindvn.workers.dev/upload"; 
+    <div id="status" style="font-size: 13px; color: #666; margin: 10px 0;">Sẵn sàng</div>
 
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const status = document.getElementById('status');
-        const result = document.getElementById('result');
+    <div id="result-area" style="display:none">
+        <hr style="border: 0.5px solid #eee; margin: 20px 0;">
+        <a id="install-link" class="btn" href="#">CÀI ĐẶT NGAY</a>
+        <div id="qrcode"></div>
+        <p id="raw-url" style="font-size: 9px; color: #999; word-break: break-all; margin-top: 15px;"></p>
+    </div>
+</div>
 
-        dropZone.onclick = () => fileInput.click();
+<script>
+    // THAY LINK NÀY BẰNG LINK WORKER CỦA BẠN
+    const WORKER_URL = "https://ipa-manager.ios-khoindvn.workers.dev/upload";
 
-        fileInput.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const status = document.getElementById('status');
+    const progressBox = document.getElementById('progress-box');
+    const progressBar = document.getElementById('progress-bar');
 
-            status.innerText = "Đang đọc thông tin IPA...";
-            try {
-                const parser = new AppInfoParser(file);
-                const info = await parser.parse();
+    dropZone.onclick = () => fileInput.click();
 
-                status.innerText = "Đang upload lên Cloudflare R2...";
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('bundleId', info.CFBundleIdentifier);
-                formData.append('appName', info.CFBundleDisplayName || info.CFBundleName);
-                formData.append('version', info.CFBundleShortVersionString);
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-                const res = await fetch(WORKER_URL, { method: 'POST', body: formData });
-                const data = await res.json();
+        const pass = document.getElementById('password-input').value;
+        if (!pass) { alert("Vui lòng nhập mật khẩu!"); return; }
 
-                status.innerText = "Tải lên thành công!";
-                result.innerHTML = `<a class="btn" href="${data.link}">CÀI ĐẶT NGAY</a><br><p style="word-break: break-all; margin-top:15px; font-size:10px">${data.link}</p>`;
-            } catch (err) {
-                status.innerText = "Lỗi: " + err.message;
+        status.innerText = "Đang phân tích IPA...";
+        try {
+            const parser = new AppInfoParser(file);
+            const info = await parser.parse();
+            
+            document.getElementById('app-info').style.display = "block";
+            document.getElementById('app-info').innerHTML = `<b>App:</b> ${info.CFBundleDisplayName || info.CFBundleName}<br><b>ID:</b> ${info.CFBundleIdentifier}`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('password', pass);
+            formData.append('customName', document.getElementById('custom-name').value);
+            formData.append('bundleId', info.CFBundleIdentifier);
+            formData.append('appName', info.CFBundleDisplayName || info.CFBundleName);
+            formData.append('version', info.CFBundleShortVersionString);
+
+            uploadFile(formData);
+        } catch (err) {
+            status.innerText = "Lỗi đọc file: " + err.message;
+        }
+    };
+
+    function uploadFile(formData) {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', WORKER_URL, true);
+
+        progressBox.style.display = "block";
+        status.innerText = "Đang tải lên R2...";
+
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const percent = (e.loaded / e.total) * 100;
+                progressBar.style.width = percent + '%';
+                status.innerText = `Đang tải lên: ${Math.round(percent)}%`;
             }
         };
-    </script>
+
+        xhr.onload = function() {
+            const res = JSON.parse(xhr.responseText);
+            if (xhr.status === 200) {
+                status.innerText = "Thành công!";
+                showResult(res.link);
+            } else {
+                status.innerText = "Lỗi: " + (res.error || "Không xác định");
+                progressBox.style.display = "none";
+            }
+        };
+
+        xhr.send(formData);
+    }
+
+    function showResult(link) {
+        document.getElementById('result-area').style.display = "block";
+        document.getElementById('install-link').href = link;
+        document.getElementById('raw-url').innerText = link;
+        document.getElementById('qrcode').innerHTML = "";
+        new QRCode(document.getElementById("qrcode"), { text: link, width: 150, height: 150 });
+    }
+</script>
+
 </body>
 </html>
