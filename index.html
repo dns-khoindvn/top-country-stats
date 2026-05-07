@@ -2,30 +2,35 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>IPA Uploader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPA Auto Installer</title>
     <script src="https://unpkg.com/app-info-parser@1.1.4/dist/app-info-parser.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f9; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 400px; }
-        #drop-zone { border: 2px dashed #007aff; padding: 40px; border-radius: 10px; cursor: pointer; color: #007aff; margin-bottom: 20px; }
-        .btn { background: #007aff; color: white; padding: 12px 25px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px; }
+        body { font-family: -apple-system, sans-serif; text-align: center; padding: 20px; background: #f0f2f5; }
+        .container { background: white; max-width: 400px; margin: 50px auto; padding: 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        #drop-zone { border: 2px dashed #007aff; padding: 40px; border-radius: 15px; cursor: pointer; color: #007aff; margin: 20px 0; transition: 0.3s; }
+        #drop-zone:hover { background: #eef6ff; }
+        .btn { background: #007aff; color: white; padding: 15px 30px; border-radius: 10px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 20px; }
+        #status { font-size: 14px; color: #666; margin-top: 15px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Tạo Link Cài IPA</h2>
-        <div id="drop-zone">Nhấn để chọn hoặc kéo thả file .ipa</div>
+    <div class="container">
+        <h2>Cài đặt IPA trực tiếp</h2>
+        <div id="drop-zone">Kéo thả file .ipa vào đây hoặc nhấn để chọn</div>
         <input type="file" id="file-input" style="display:none" accept=".ipa">
-        <div id="status"></div>
+        <div id="status">Sẵn sàng</div>
+        <div id="result"></div>
     </div>
 
     <script>
-        // QUAN TRỌNG: Thay link này bằng link Worker của bạn
-        const WORKER_URL = "https://ipa-manager.YOURSUBDOMAIN.workers.dev/upload"; 
+        // THAY LINK NÀY BẰNG LINK WORKER CỦA BẠN (Cái link .workers.dev ấy)
+        const WORKER_URL = "https://ipa-manager.khoindvn.workers.dev/upload"; 
 
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const status = document.getElementById('status');
+        const result = document.getElementById('result');
 
         dropZone.onclick = () => fileInput.click();
 
@@ -38,7 +43,7 @@
                 const parser = new AppInfoParser(file);
                 const info = await parser.parse();
 
-                status.innerText = "Đang tải lên Cloudflare...";
+                status.innerText = "Đang upload lên Cloudflare R2...";
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('bundleId', info.CFBundleIdentifier);
@@ -48,7 +53,8 @@
                 const res = await fetch(WORKER_URL, { method: 'POST', body: formData });
                 const data = await res.json();
 
-                status.innerHTML = `<p>Xong! Nhấn nút dưới để cài:</p><a class="btn" href="${data.link}">Cài đặt ngay</a>`;
+                status.innerText = "Tải lên thành công!";
+                result.innerHTML = `<a class="btn" href="${data.link}">CÀI ĐẶT NGAY</a><br><p style="word-break: break-all; margin-top:15px; font-size:10px">${data.link}</p>`;
             } catch (err) {
                 status.innerText = "Lỗi: " + err.message;
             }
