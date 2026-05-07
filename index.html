@@ -3,128 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPA Manager Pro</title>
+    <title>IPA Manager Admin</title>
     <script src="https://unpkg.com/app-info-parser@1.1.4/dist/app-info-parser.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --ios-blue: #007aff; --ios-bg: #f2f2f7; }
-        body { font-family: -apple-system, sans-serif; background: var(--ios-bg); display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .card { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
-        #drop-zone { border: 2px dashed var(--ios-blue); padding: 30px; border-radius: 15px; cursor: pointer; color: var(--ios-blue); background: #f0f7ff; margin: 20px 0; transition: 0.3s; }
-        #drop-zone:hover { background: #e1efff; }
-        .progress-box { display: none; height: 8px; background: #eee; border-radius: 4px; margin: 20px 0; overflow: hidden; }
-        .progress-bar { width: 0%; height: 100%; background: var(--ios-blue); transition: 0.1s; }
-        .btn { background: var(--ios-blue); color: white; padding: 15px 25px; border-radius: 12px; text-decoration: none; display: inline-block; font-weight: bold; margin-top: 15px; cursor: pointer; border: none; width: 100%; }
-        #qrcode { margin-top: 20px; display: flex; justify-content: center; }
-        .app-info { background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 12px; text-align: left; margin-top: 10px; display: none; }
+        :root { --blue: #007aff; }
+        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid #eee; }
+        .tab { flex: 1; padding: 10px; cursor: pointer; text-align: center; font-weight: bold; color: #888; }
+        .tab.active { color: var(--blue); border-bottom: 2px solid var(--blue); }
+        .content { display: none; }
+        .content.active { display: block; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        .btn { background: var(--blue); color: white; padding: 12px; border: none; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .delete-btn { color: red; cursor: pointer; font-weight: bold; border: 1px solid red; padding: 2px 8px; border-radius: 5px; }
+        #drop-zone { border: 2px dashed var(--blue); padding: 30px; text-align: center; border-radius: 15px; background: #f0f7ff; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2 style="margin-top:0">IPA Manager</h2>
-    
-    <input type="password" id="password-input" placeholder="Mật khẩu quản lý">
-    <input type="text" id="custom-name" placeholder="Tên file khi lưu (tùy chọn)">
-
-    <div id="drop-zone">Kéo thả hoặc nhấn để chọn file .ipa</div>
-    <input type="file" id="file-input" style="display:none" accept=".ipa">
-
-    <div class="app-info" id="app-info"></div>
-
-    <div class="progress-box" id="progress-box">
-        <div class="progress-bar" id="progress-bar"></div>
+<div class="container">
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('upload-tab')">Upload</div>
+        <div class="tab" onclick="showTab('admin-tab'); loadFiles();">Admin</div>
     </div>
 
-    <div id="status" style="font-size: 13px; color: #666; margin: 10px 0;">Sẵn sàng</div>
+    <div id="upload-tab" class="content active">
+        <input type="password" id="pass-upload" placeholder="Mật khẩu">
+        <input type="text" id="name-upload" placeholder="Tên file tùy chỉnh">
+        <div id="drop-zone">Nhấn hoặc thả file IPA vào đây</div>
+        <input type="file" id="file-input" style="display:none" accept=".ipa">
+        <div id="status" style="margin-top:10px; font-size:12px; color:#666"></div>
+        <div id="result" style="margin-top:20px; word-break: break-all;"></div>
+    </div>
 
-    <div id="result-area" style="display:none">
-        <hr style="border: 0.5px solid #eee; margin: 20px 0;">
-        <a id="install-link" class="btn" href="#">CÀI ĐẶT NGAY</a>
-        <div id="qrcode"></div>
-        <p id="raw-url" style="font-size: 9px; color: #999; word-break: break-all; margin-top: 15px;"></p>
+    <div id="admin-tab" class="content">
+        <input type="password" id="pass-admin" placeholder="Nhập mật khẩu Admin">
+        <button class="btn" onclick="loadFiles()">Đăng nhập & Tải danh sách</button>
+        <div id="file-list" style="margin-top:20px;"></div>
     </div>
 </div>
 
 <script>
-    // THAY LINK NÀY BẰNG LINK WORKER CỦA BẠN
-    const WORKER_URL = "https://ipa-manager.ios-khoindvn.workers.dev/upload";
+    const API = "https://ipa-manager.ios-khoindvn.workers.dev"; // LINK WORKER CỦA BẠN
 
+    function showTab(id) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // --- LOGIC UPLOAD ---
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
-    const status = document.getElementById('status');
-    const progressBox = document.getElementById('progress-box');
-    const progressBar = document.getElementById('progress-bar');
-
     dropZone.onclick = () => fileInput.click();
 
     fileInput.onchange = async (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+        const pass = document.getElementById('pass-upload').value;
+        if (!file || !pass) return alert("Thiếu file hoặc mật khẩu!");
 
-        const pass = document.getElementById('password-input').value;
-        if (!pass) { alert("Vui lòng nhập mật khẩu!"); return; }
+        document.getElementById('status').innerText = "Đang xử lý...";
+        const parser = new AppInfoParser(file);
+        const info = await parser.parse();
 
-        status.innerText = "Đang phân tích IPA...";
-        try {
-            const parser = new AppInfoParser(file);
-            const info = await parser.parse();
-            
-            document.getElementById('app-info').style.display = "block";
-            document.getElementById('app-info').innerHTML = `<b>App:</b> ${info.CFBundleDisplayName || info.CFBundleName}<br><b>ID:</b> ${info.CFBundleIdentifier}`;
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('password', pass);
+        fd.append('customName', document.getElementById('name-upload').value);
+        fd.append('bundleId', info.CFBundleIdentifier);
+        fd.append('appName', info.CFBundleDisplayName || info.CFBundleName);
+        fd.append('version', info.CFBundleShortVersionString);
 
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('password', pass);
-            formData.append('customName', document.getElementById('custom-name').value);
-            formData.append('bundleId', info.CFBundleIdentifier);
-            formData.append('appName', info.CFBundleDisplayName || info.CFBundleName);
-            formData.append('version', info.CFBundleShortVersionString);
-
-            uploadFile(formData);
-        } catch (err) {
-            status.innerText = "Lỗi đọc file: " + err.message;
+        const res = await fetch(`${API}/upload`, { method: 'POST', body: fd });
+        const data = await res.json();
+        
+        if (data.link) {
+            document.getElementById('result').innerHTML = `
+                <b>Link rút gọn:</b><br><input value="${data.link}" readonly onclick="this.select(); document.execCommand('copy'); alert('Đã copy!')">
+                <br><a href="${data.link}" style="color:blue">Thử cài đặt</a>
+            `;
+            document.getElementById('status').innerText = "Thành công!";
+        } else {
+            alert("Lỗi: " + data.error);
         }
     };
 
-    function uploadFile(formData) {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', WORKER_URL, true);
-
-        progressBox.style.display = "block";
-        status.innerText = "Đang tải lên R2...";
-
-        xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-                const percent = (e.loaded / e.total) * 100;
-                progressBar.style.width = percent + '%';
-                status.innerText = `Đang tải lên: ${Math.round(percent)}%`;
-            }
-        };
-
-        xhr.onload = function() {
-            const res = JSON.parse(xhr.responseText);
-            if (xhr.status === 200) {
-                status.innerText = "Thành công!";
-                showResult(res.link);
-            } else {
-                status.innerText = "Lỗi: " + (res.error || "Không xác định");
-                progressBox.style.display = "none";
-            }
-        };
-
-        xhr.send(formData);
+    // --- LOGIC ADMIN ---
+    async function loadFiles() {
+        const pass = document.getElementById('pass-admin').value;
+        if (!pass) return;
+        
+        const res = await fetch(`${API}/list`, { headers: { "Authorization": pass } });
+        if (res.status === 401) return alert("Mật khẩu sai!");
+        
+        const files = await res.json();
+        let html = "";
+        files.forEach(f => {
+            html += `
+                <div class="file-item">
+                    <span title="${f.key}">${f.key.substring(0, 20)}...</span>
+                    <span class="delete-btn" onclick="deleteFile('${f.key}')">Xóa</span>
+                </div>
+            `;
+        });
+        document.getElementById('file-list').innerHTML = html || "Không có file nào.";
     }
 
-    function showResult(link) {
-        document.getElementById('result-area').style.display = "block";
-        document.getElementById('install-link').href = link;
-        document.getElementById('raw-url').innerText = link;
-        document.getElementById('qrcode').innerHTML = "";
-        new QRCode(document.getElementById("qrcode"), { text: link, width: 150, height: 150 });
+    async function deleteFile(name) {
+        if (!confirm("Xóa file này?")) return;
+        const pass = document.getElementById('pass-admin').value;
+        await fetch(`${API}/delete?file=${name}`, { method: 'DELETE', headers: { "Authorization": pass } });
+        loadFiles();
     }
 </script>
-
 </body>
 </html>
