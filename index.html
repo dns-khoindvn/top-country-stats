@@ -1,149 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Top 10 Visitor Countries</title>
-
-<style>
-body{
-  margin:0;
-  font-family: system-ui, Arial, sans-serif;
-  background:#eef5ff;
-  display:flex;
-  justify-content:center;
-  padding-top:50px;
-}
-
-.card{
-  background:white;
-  width:360px;
-  border-radius:20px;
-  padding:20px;
-  box-shadow:0 15px 35px rgba(0,0,0,.15);
-}
-
-h1{
-  text-align:center;
-  font-size:24px;
-  margin:0;
-}
-
-.meta{
-  text-align:center;
-  color:#666;
-  font-size:13px;
-  margin:6px 0 14px;
-}
-
-.header{
-  display:flex;
-  background:linear-gradient(90deg,#2ad1ff,#3b9dff);
-  color:white;
-  border-radius:10px;
-  overflow:hidden;
-  font-weight:600;
-}
-
-.header div{
-  padding:8px;
-  text-align:center;
-}
-
-.header .rank{width:40px}
-.header .country{flex:1}
-.header .visits{width:90px}
-
-.row{
-  display:flex;
-  border-bottom:1px solid #eee;
-  padding:7px 0;
-}
-
-.row:last-child{border:none}
-
-.row div{
-  text-align:center;
-}
-
-.row .rank{width:40px}
-.row .country{flex:1}
-.row .visits{width:90px;font-weight:600}
-
-.loading{
-  text-align:center;
-  padding:20px;
-  color:#777;
-}
-
-.error{
-  color:red;
-  text-align:center;
-  padding:20px;
-}
-</style>
+    <meta charset="UTF-8">
+    <title>IPA Uploader</title>
+    <script src="https://unpkg.com/app-info-parser@1.1.4/dist/app-info-parser.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f9; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 400px; }
+        #drop-zone { border: 2px dashed #007aff; padding: 40px; border-radius: 10px; cursor: pointer; color: #007aff; margin-bottom: 20px; }
+        .btn { background: #007aff; color: white; padding: 12px 25px; border-radius: 8px; text-decoration: none; display: inline-block; margin-top: 20px; }
+    </style>
 </head>
-
 <body>
+    <div class="card">
+        <h2>Tạo Link Cài IPA</h2>
+        <div id="drop-zone">Nhấn để chọn hoặc kéo thả file .ipa</div>
+        <input type="file" id="file-input" style="display:none" accept=".ipa">
+        <div id="status"></div>
+    </div>
 
-<div class="card">
-  <h1>🌍 TOP 10 Visitor Countries</h1>
-  <div class="meta">Last 28 days • sessions</div>
+    <script>
+        // QUAN TRỌNG: Thay link này bằng link Worker của bạn
+        const WORKER_URL = "https://ipa-manager.YOURSUBDOMAIN.workers.dev/upload"; 
 
-  <div class="header">
-    <div class="rank">#</div>
-    <div class="country">Country</div>
-    <div class="visits">Visits</div>
-  </div>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const status = document.getElementById('status');
 
-  <div id="list" class="loading">Loading data...</div>
-</div>
+        dropZone.onclick = () => fileInput.click();
 
-<script>
-const DATA_URL = "/top-country-stats/public/data/top-countries.json";
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-async function loadData(){
-  try{
-    const res = await fetch(DATA_URL);
-    if(!res.ok) throw new Error("Fetch failed");
+            status.innerText = "Đang đọc thông tin IPA...";
+            try {
+                const parser = new AppInfoParser(file);
+                const info = await parser.parse();
 
-    const data = await res.json();
+                status.innerText = "Đang tải lên Cloudflare...";
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('bundleId', info.CFBundleIdentifier);
+                formData.append('appName', info.CFBundleDisplayName || info.CFBundleName);
+                formData.append('version', info.CFBundleShortVersionString);
 
-    // support both formats
-    const rows = Array.isArray(data) ? data : (data.rows || []);
+                const res = await fetch(WORKER_URL, { method: 'POST', body: formData });
+                const data = await res.json();
 
-    if(!rows.length){
-      document.getElementById("list").innerHTML =
-        "<div class='error'>No data found</div>";
-      return;
-    }
-
-    let html = "";
-
-    rows.slice(0,10).forEach((item,i)=>{
-      const country = item.country || item.name || "Unknown";
-      const visits = item.visits || item.value || 0;
-
-      html += `
-        <div class="row">
-          <div class="rank">${i+1}</div>
-          <div class="country">${country}</div>
-          <div class="visits">${visits}</div>
-        </div>
-      `;
-    });
-
-    document.getElementById("list").innerHTML = html;
-
-  }catch(err){
-    document.getElementById("list").innerHTML =
-      "<div class='error'>Failed to load GA4 data</div>";
-    console.error(err);
-  }
-}
-
-loadData();
-</script>
-
+                status.innerHTML = `<p>Xong! Nhấn nút dưới để cài:</p><a class="btn" href="${data.link}">Cài đặt ngay</a>`;
+            } catch (err) {
+                status.innerText = "Lỗi: " + err.message;
+            }
+        };
+    </script>
 </body>
 </html>
